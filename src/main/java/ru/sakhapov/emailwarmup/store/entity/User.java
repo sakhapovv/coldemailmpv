@@ -3,9 +3,11 @@ package ru.sakhapov.emailwarmup.store.entity;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import org.hibernate.annotations.CreationTimestamp;
 import lombok.*;
 import jakarta.persistence.*;
 
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -35,6 +37,10 @@ public class User {
     @Builder.Default
     @Column(nullable = false)
     private boolean enabled = true;
+
+    @CreationTimestamp
+    @Column(updatable = false)
+    private Instant createdAt;
 
     @Builder.Default
     @ManyToMany(fetch = FetchType.EAGER)
