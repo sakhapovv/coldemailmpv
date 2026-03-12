@@ -14,8 +14,10 @@ import ru.sakhapov.emailwarmup.api.dto.RegisterRequest;
 import ru.sakhapov.emailwarmup.store.entity.Role;
 import ru.sakhapov.emailwarmup.store.entity.RoleName;
 import ru.sakhapov.emailwarmup.store.entity.User;
+import ru.sakhapov.emailwarmup.store.entity.Workspace;
 import ru.sakhapov.emailwarmup.store.repository.RoleRepository;
 import ru.sakhapov.emailwarmup.store.repository.UserRepository;
+import ru.sakhapov.emailwarmup.store.repository.WorkspaceRepository;
 import ru.sakhapov.emailwarmup.store.security.JwtService;
 
 import java.util.Set;
@@ -30,6 +32,7 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final UserDetailsService userDetailsService;
     private final JwtService jwtService;
+    private final WorkspaceRepository workspaceRepository;
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -48,6 +51,12 @@ public class AuthService {
                 .build();
 
         userRepository.save(user);
+        workspaceRepository.save(
+                Workspace.builder()
+                        .name("Personal workspace")
+                        .owner(user)
+                        .build()
+        );
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
         String jwt = jwtService.generateToken(userDetails);
