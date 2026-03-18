@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import ru.sakhapov.emailwarmup.api.dto.CreateSenderRequest;
+import ru.sakhapov.emailwarmup.api.dto.SendTestEmailRequest;
+import ru.sakhapov.emailwarmup.api.dto.SendTestEmailResponse;
 import ru.sakhapov.emailwarmup.api.dto.SenderResponse;
 import ru.sakhapov.emailwarmup.api.dto.SenderTestResponse;
 import ru.sakhapov.emailwarmup.store.service.SenderService;
@@ -50,5 +52,15 @@ public class SenderController {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized");
         }
         return senderService.testSender(principal.getUsername(), senderId);
+    }
+
+    @PostMapping("/{senderId}/send-test")
+    public SendTestEmailResponse sendTest(@AuthenticationPrincipal UserDetails principal,
+                                          @PathVariable Long senderId,
+                                          @Valid @RequestBody SendTestEmailRequest request) {
+        if (principal == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized");
+        }
+        return senderService.sendTestEmail(principal.getUsername(), senderId, request);
     }
 }
