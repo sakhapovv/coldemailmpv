@@ -1,13 +1,30 @@
 package ru.sakhapov.emailwarmup.store.entity;
 
-import jakarta.persistence.*;
-import lombok.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.Instant;
 
 @Entity
-@Table(name = "SuppressionEntry")
+@Table(
+        name = "suppression_entries",
+        uniqueConstraints = @UniqueConstraint(columnNames = {"workspace_id", "email"})
+)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -19,14 +36,18 @@ public class SuppressionEntry {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private Long workspaceId;
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "workspace_id", nullable = false)
+    private Workspace workspace;
 
+    @Column(nullable = false, length = 320)
     private String email;
 
-    private String reason;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 32)
+    private SuppressionReason reason;
 
     @CreationTimestamp
     @Column(updatable = false)
     private Instant createdAt;
-
 }

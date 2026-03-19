@@ -9,6 +9,7 @@ import ru.sakhapov.emailwarmup.store.entity.EmailEvent;
 import ru.sakhapov.emailwarmup.store.entity.EmailEventStatus;
 import ru.sakhapov.emailwarmup.store.entity.Prospect;
 import ru.sakhapov.emailwarmup.store.entity.SenderAccount;
+import ru.sakhapov.emailwarmup.store.entity.SuppressionReason;
 import ru.sakhapov.emailwarmup.store.entity.Workspace;
 import ru.sakhapov.emailwarmup.store.repository.EmailEventRepository;
 import ru.sakhapov.emailwarmup.store.repository.ProspectRepository;
@@ -27,6 +28,7 @@ public class EmailEventServiceImpl implements EmailEventService {
     private final WorkspaceRepository workspaceRepository;
     private final SenderService senderService;
     private final TemplateService templateService;
+    private final SuppressionService suppressionService;
 
     @Transactional(noRollbackFor = IllegalArgumentException.class)
     public EmailEventResponse sendToProspect(String ownerEmail, Long prospectId, SendProspectEmailRequest request) {
@@ -37,6 +39,24 @@ public class EmailEventServiceImpl implements EmailEventService {
                 .orElseThrow(() -> new IllegalArgumentException("Sender not found"));
         String renderedSubject = templateService.render(request.getSubject(), prospect);
         String renderedText = templateService.render(request.getText(), prospect);
+        var suppressionReason = suppressionService.findSuppressionReason(ownerEmail, prospect.getEmail());
+        if (suppressionReason.isPresent()) {
+            EmailEvent event = emailEventRepository.save(
+                    EmailEvent.builder()
+                            .workspace(workspace)
+                            .senderAccount(sender)
+                            .prospect(prospect)
+                            .toEmail(prospect.getEmail())
+                            .subject(renderedSubject)
+                            .status(EmailEventStatus.SKIPPED)
+                            .errorMessage("Suppressed: " + suppressionReason.get().name())
+                            .build()
+            );
+
+            throw new IllegalArgumentException(
+                    buildSuppressedMessage(suppressionReason.get()) + " (eventId=" + event.getId() + ")"
+            );
+        }
 
         try {
             MailSendResult result = senderService.sendEmail(
@@ -122,5 +142,9 @@ public class EmailEventServiceImpl implements EmailEventService {
             return value;
         }
         return value.substring(0, maxLength);
+    }
+
+    private String buildSuppressedMessage(SuppressionReason reason) {
+        return "Recipient is suppressed: " + reason.name();
     }
 }
