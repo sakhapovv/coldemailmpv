@@ -15,8 +15,8 @@ MVP backend для cold email SaaS на `Spring Boot 4`, `Java 21`, `PostgreSQL`
 - персонализация шаблонов
 - suppression list
 - публичный unsubscribe flow
-- bounce handling foundation
-
+- базовая логика обработки недоставленных писем
+  
 ## Стек
 - `Java 21`
 - `Spring Boot 4.0.3`
