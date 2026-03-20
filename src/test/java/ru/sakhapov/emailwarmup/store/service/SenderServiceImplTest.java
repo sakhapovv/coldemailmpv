@@ -46,10 +46,16 @@ class SenderServiceImplTest {
         request.setFromName("Sender");
         request.setStartTls(false);
         request.setSsl(true);
+        request.setImapHost("imap.gmail.com");
+        request.setImapPort(993);
+        request.setImapUsername("mail@test.com");
+        request.setImapPassword("imap-password");
+        request.setImapSsl(true);
 
         when(workspaceRepository.findFirstByOwnerEmail("owner@test.com")).thenReturn(Optional.of(workspace));
         when(senderAccountRepository.existsByWorkspaceIdAndEmailIgnoreCase(10L, "mail@test.com")).thenReturn(false);
         when(cryptoService.encrypt("app-password")).thenReturn("encrypted-password");
+        when(cryptoService.encrypt("imap-password")).thenReturn("encrypted-imap-password");
         when(senderAccountRepository.save(any(SenderAccount.class))).thenAnswer(invocation -> {
             SenderAccount sender = invocation.getArgument(0);
             sender.setId(1L);
@@ -64,9 +70,14 @@ class SenderServiceImplTest {
         assertThat(response.getSmtpPort()).isEqualTo(465);
         assertThat(response.isSsl()).isTrue();
         assertThat(response.isStartTls()).isFalse();
+        assertThat(response.getImapHost()).isEqualTo("imap.gmail.com");
+        assertThat(response.getImapPort()).isEqualTo(993);
+        assertThat(response.getImapUsername()).isEqualTo("mail@test.com");
+        assertThat(response.isImapSsl()).isTrue();
         assertThat(response.getStatus()).isEqualTo("ACTIVE");
 
         verify(cryptoService).encrypt("app-password");
+        verify(cryptoService).encrypt("imap-password");
     }
 
     @Test
@@ -96,6 +107,10 @@ class SenderServiceImplTest {
                 .fromName("Sender")
                 .startTls(false)
                 .ssl(true)
+                .imapHost("imap.gmail.com")
+                .imapPort(993)
+                .imapUsername("mail@test.com")
+                .imapSsl(true)
                 .status(ru.sakhapov.emailwarmup.store.entity.SenderStatus.ACTIVE)
                 .build();
 
@@ -106,6 +121,7 @@ class SenderServiceImplTest {
 
         assertThat(responses).hasSize(1);
         assertThat(responses.getFirst().getEmail()).isEqualTo("mail@test.com");
+        assertThat(responses.getFirst().getImapHost()).isEqualTo("imap.gmail.com");
         assertThat(responses.getFirst().getStatus()).isEqualTo("ACTIVE");
     }
 }

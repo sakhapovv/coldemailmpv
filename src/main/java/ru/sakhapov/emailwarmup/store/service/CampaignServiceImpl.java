@@ -80,6 +80,7 @@ public class CampaignServiceImpl implements CampaignService {
         );
 
         int sentCount = 0;
+        int skippedCount = 0;
         int failedCount = 0;
 
         for (Prospect prospect : prospects) {
@@ -91,7 +92,11 @@ public class CampaignServiceImpl implements CampaignService {
                 );
                 sentCount++;
             } catch (IllegalArgumentException ex) {
-                failedCount++;
+                if (isSkipped(ex.getMessage())) {
+                    skippedCount++;
+                } else {
+                    failedCount++;
+                }
             }
         }
 
@@ -101,6 +106,7 @@ public class CampaignServiceImpl implements CampaignService {
                 .campaignId(campaign.getId())
                 .totalProspects(prospects.size())
                 .sentCount(sentCount)
+                .skippedCount(skippedCount)
                 .failedCount(failedCount)
                 .status(campaign.getStatus().name())
                 .build();
@@ -129,5 +135,9 @@ public class CampaignServiceImpl implements CampaignService {
                 .status(campaign.getStatus().name())
                 .createdAt(campaign.getCreatedAt())
                 .build();
+    }
+
+    private boolean isSkipped(String message) {
+        return message != null && message.startsWith("Recipient is suppressed:");
     }
 }

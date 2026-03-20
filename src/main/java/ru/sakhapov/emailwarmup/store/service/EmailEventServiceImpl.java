@@ -29,6 +29,7 @@ public class EmailEventServiceImpl implements EmailEventService {
     private final SenderService senderService;
     private final TemplateService templateService;
     private final SuppressionService suppressionService;
+    private final UnsubscribeService unsubscribeService;
 
     @Transactional(noRollbackFor = IllegalArgumentException.class)
     public EmailEventResponse sendToProspect(String ownerEmail, Long prospectId, SendProspectEmailRequest request) {
@@ -64,7 +65,7 @@ public class EmailEventServiceImpl implements EmailEventService {
                     sender.getId(),
                     prospect.getEmail(),
                     renderedSubject,
-                    renderedText
+                    appendUnsubscribeFooter(renderedText, prospect)
             );
 
             EmailEvent event = emailEventRepository.save(
@@ -81,6 +82,11 @@ public class EmailEventServiceImpl implements EmailEventService {
 
             return map(event);
         } catch (IllegalArgumentException ex) {
+            if (isHardBounce(ex.getMessage())) {
+                suppressionService.suppressEmail(workspace, prospect.getEmail(), SuppressionReason.BOUNCED);
+                prospect.setStatus(ru.sakhapov.emailwarmup.store.entity.ProspectStatus.BOUNCED);
+            }
+
             EmailEvent event = emailEventRepository.save(
                     EmailEvent.builder()
                             .workspace(workspace)
@@ -146,5 +152,27 @@ public class EmailEventServiceImpl implements EmailEventService {
 
     private String buildSuppressedMessage(SuppressionReason reason) {
         return "Recipient is suppressed: " + reason.name();
+    }
+
+    private String appendUnsubscribeFooter(String text, Prospect prospect) {
+        String unsubscribeUrl = unsubscribeService.buildUnsubscribeUrl(prospect);
+        return text + "\n\n---\nUnsubscribe: " + unsubscribeUrl;
+    }
+
+    private boolean isHardBounce(String message) {
+        if (message == null || message.isBlank()) {
+            return false;
+        }
+
+        String normalized = message.toLowerCase();
+        return normalized.contains("550")
+                || normalized.contains("5.1.1")
+                || normalized.contains("user unknown")
+                || normalized.contains("unknown user")
+                || normalized.contains("mailbox unavailable")
+                || normalized.contains("no such user")
+                || normalized.contains("recipient address rejected")
+                || normalized.contains("address rejected")
+                || normalized.contains("invalid addresses");
     }
 }

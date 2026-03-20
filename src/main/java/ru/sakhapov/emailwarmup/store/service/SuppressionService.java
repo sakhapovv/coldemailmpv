@@ -2,7 +2,9 @@ package ru.sakhapov.emailwarmup.store.service;
 
 import ru.sakhapov.emailwarmup.api.dto.CreateSuppressionRequest;
 import ru.sakhapov.emailwarmup.api.dto.SuppressionEntryResponse;
+import ru.sakhapov.emailwarmup.store.entity.SuppressionEntry;
 import ru.sakhapov.emailwarmup.store.entity.SuppressionReason;
+import ru.sakhapov.emailwarmup.store.entity.Workspace;
 
 import java.util.List;
 import java.util.Optional;
@@ -16,4 +18,6 @@ public interface SuppressionService {
     void deleteSuppression(String ownerEmail, Long suppressionId);
 
     Optional<SuppressionReason> findSuppressionReason(String ownerEmail, String email);
+
+    SuppressionEntry suppressEmail(Workspace workspace, String email, SuppressionReason reason);
 }

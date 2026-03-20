@@ -54,6 +54,15 @@ public class SenderController {
         return senderService.testSender(principal.getUsername(), senderId);
     }
 
+    @PostMapping("/{senderId}/test-imap")
+    public SenderTestResponse testImap(@AuthenticationPrincipal UserDetails principal,
+                                       @PathVariable Long senderId) {
+        if (principal == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized");
+        }
+        return senderService.testImapSender(principal.getUsername(), senderId);
+    }
+
     @PostMapping("/{senderId}/send-test")
     public SendTestEmailResponse sendTest(@AuthenticationPrincipal UserDetails principal,
                                           @PathVariable Long senderId,

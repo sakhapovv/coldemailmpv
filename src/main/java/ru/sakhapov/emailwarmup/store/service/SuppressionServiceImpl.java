@@ -62,6 +62,18 @@ public class SuppressionServiceImpl implements SuppressionService {
                 .map(SuppressionEntry::getReason);
     }
 
+    @Transactional
+    public SuppressionEntry suppressEmail(Workspace workspace, String email, SuppressionReason reason) {
+        return suppressionEntryRepository.findByWorkspaceIdAndEmailIgnoreCase(workspace.getId(), email)
+                .orElseGet(() -> suppressionEntryRepository.save(
+                        SuppressionEntry.builder()
+                                .workspace(workspace)
+                                .email(email.trim())
+                                .reason(reason)
+                                .build()
+                ));
+    }
+
     private Workspace getOwnedWorkspace(String ownerEmail) {
         return workspaceRepository.findFirstByOwnerEmail(ownerEmail)
                 .orElseThrow(() -> new IllegalArgumentException("Workspace not found"));

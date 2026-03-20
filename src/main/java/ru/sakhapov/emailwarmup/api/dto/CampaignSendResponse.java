@@ -9,6 +9,7 @@ public class CampaignSendResponse {
     private Long campaignId;
     private int totalProspects;
     private int sentCount;
+    private int skippedCount;
     private int failedCount;
     private String status;
 }

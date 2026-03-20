@@ -33,4 +33,16 @@ public class CreateSenderRequest {
     private boolean startTls = true;
 
     private boolean ssl = false;
+
+    private String imapHost;
+
+    @Min(1)
+    @Max(65535)
+    private Integer imapPort;
+
+    private String imapUsername;
+
+    private String imapPassword;
+
+    private boolean imapSsl = true;
 }

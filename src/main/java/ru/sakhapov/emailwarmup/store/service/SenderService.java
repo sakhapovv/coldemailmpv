@@ -16,6 +16,8 @@ public interface SenderService {
 
     SenderTestResponse testSender(String ownerEmail, Long senderId);
 
+    SenderTestResponse testImapSender(String ownerEmail, Long senderId);
+
     SendTestEmailResponse sendTestEmail(String ownerEmail, Long senderId, SendTestEmailRequest request);
 
     MailSendResult sendEmail(String ownerEmail, Long senderId, String to, String subject, String text);

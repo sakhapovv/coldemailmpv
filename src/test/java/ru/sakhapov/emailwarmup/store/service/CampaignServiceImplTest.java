@@ -144,6 +144,7 @@ class CampaignServiceImplTest {
         assertThat(response.getCampaignId()).isEqualTo(100L);
         assertThat(response.getTotalProspects()).isEqualTo(2);
         assertThat(response.getSentCount()).isEqualTo(1);
+        assertThat(response.getSkippedCount()).isEqualTo(0);
         assertThat(response.getFailedCount()).isEqualTo(1);
         assertThat(response.getStatus()).isEqualTo("COMPLETED");
 
@@ -154,5 +155,34 @@ class CampaignServiceImplTest {
                 .extracting(SendProspectEmailRequest::getSenderId)
                 .containsOnly(5L);
         assertThat(campaign.getStatus()).isEqualTo(CampaignStatus.COMPLETED);
+    }
+
+    @Test
+    void runCampaignShouldCountSkippedSeparately() {
+        Workspace workspace = Workspace.builder().id(10L).build();
+        SenderAccount sender = SenderAccount.builder().id(5L).workspace(workspace).build();
+        Campaign campaign = Campaign.builder()
+                .id(100L)
+                .workspace(workspace)
+                .senderAccount(sender)
+                .name("First campaign")
+                .subject("Hello")
+                .text("Hi")
+                .status(CampaignStatus.DRAFT)
+                .build();
+        Prospect prospect = Prospect.builder().id(1L).status(ProspectStatus.ACTIVE).build();
+
+        when(workspaceRepository.findFirstByOwnerEmail("owner@test.com")).thenReturn(Optional.of(workspace));
+        when(campaignRepository.findByIdAndWorkspaceId(100L, 10L)).thenReturn(Optional.of(campaign));
+        when(prospectRepository.findAllByWorkspaceIdAndStatusOrderByCreatedAtDesc(10L, ProspectStatus.ACTIVE))
+                .thenReturn(List.of(prospect));
+        when(emailEventService.sendToProspect(anyString(), anyLong(), any(SendProspectEmailRequest.class)))
+                .thenThrow(new IllegalArgumentException("Recipient is suppressed: MANUAL (eventId=1)"));
+
+        CampaignSendResponse response = campaignService.runCampaign("owner@test.com", 100L);
+
+        assertThat(response.getSentCount()).isEqualTo(0);
+        assertThat(response.getSkippedCount()).isEqualTo(1);
+        assertThat(response.getFailedCount()).isEqualTo(0);
     }
 }

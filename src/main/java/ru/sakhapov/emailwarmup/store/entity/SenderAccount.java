@@ -61,6 +61,24 @@ public class SenderAccount {
     @Column(nullable = false)
     private boolean ssl;
 
+    @Column(length = 255)
+    private String imapHost;
+
+    @Column
+    private Integer imapPort;
+
+    @Column(length = 320)
+    private String imapUsername;
+
+    @Column(length = 2048)
+    private String imapPasswordEncrypted;
+
+    @Column(nullable = false)
+    private boolean imapSsl;
+
+    @Column
+    private Instant lastImapSyncAt;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 16)
     private SenderStatus status;

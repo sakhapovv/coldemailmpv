@@ -1,0 +1,1168 @@
+openapi: 3.0.3
+info:
+  title: coldemailmpv API
+  version: 0.1.0
+  description: |
+    MVP backend for cold email SaaS.
+
+    Current scope includes:
+    - JWT auth
+    - workspaces and members
+    - sender accounts with SMTP and IMAP config
+    - prospects and CSV import
+    - one-off sends and email events
+    - one-step campaigns
+    - suppression list
+    - public unsubscribe endpoint
+servers:
+  - url: http://localhost:8080
+    description: Local development
+
+tags:
+  - name: Auth
+  - name: Users
+  - name: Workspaces
+  - name: Senders
+  - name: Prospects
+  - name: Email Events
+  - name: Campaigns
+  - name: Suppressions
+  - name: Public
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+        message:
+          type: string
+        path:
+          type: string
+        errors:
+          nullable: true
+          oneOf:
+            - type: object
+              additionalProperties:
+                type: string
+            - type: array
+              items:
+                type: string
+            - type: string
+      required: [timestamp, status, message, path]
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+      required: [token]
+
+    RegisterRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+          maxLength: 100
+      required: [email, password]
+
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+      required: [email, password]
+
+    UserMeResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        email:
+          type: string
+          format: email
+        roles:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, email, roles, createdAt]
+
+    WorkspaceResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        ownerUserId:
+          type: integer
+          format: int64
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, name, ownerUserId, createdAt]
+
+    InviteWorkspaceMemberRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+      required: [email]
+
+    WorkspaceMemberResponse:
+      type: object
+      properties:
+        userId:
+          type: integer
+          format: int64
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [OWNER, MEMBER]
+        joinedAt:
+          type: string
+          format: date-time
+      required: [userId, email, role, joinedAt]
+
+    CreateSenderRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        smtpHost:
+          type: string
+        smtpPort:
+          type: integer
+          minimum: 1
+          maximum: 65535
+        smtpUsername:
+          type: string
+        smtpPassword:
+          type: string
+        fromName:
+          type: string
+          nullable: true
+        startTls:
+          type: boolean
+          default: true
+        ssl:
+          type: boolean
+          default: false
+        imapHost:
+          type: string
+          nullable: true
+        imapPort:
+          type: integer
+          nullable: true
+          minimum: 1
+          maximum: 65535
+        imapUsername:
+          type: string
+          nullable: true
+        imapPassword:
+          type: string
+          nullable: true
+        imapSsl:
+          type: boolean
+          default: true
+      required: [email, smtpHost, smtpPort, smtpUsername, smtpPassword]
+
+    SenderResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        email:
+          type: string
+          format: email
+        smtpHost:
+          type: string
+        smtpPort:
+          type: integer
+        smtpUsername:
+          type: string
+        fromName:
+          type: string
+          nullable: true
+        startTls:
+          type: boolean
+        ssl:
+          type: boolean
+        imapHost:
+          type: string
+          nullable: true
+        imapPort:
+          type: integer
+          nullable: true
+        imapUsername:
+          type: string
+          nullable: true
+        imapSsl:
+          type: boolean
+        lastImapSyncAt:
+          type: string
+          format: date-time
+          nullable: true
+        status:
+          type: string
+          enum: [ACTIVE, INACTIVE]
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, email, smtpHost, smtpPort, smtpUsername, startTls, ssl, imapSsl, status, createdAt]
+
+    SenderTestResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+      required: [success, message]
+
+    SendTestEmailRequest:
+      type: object
+      properties:
+        to:
+          type: string
+          format: email
+        subject:
+          type: string
+          maxLength: 255
+        text:
+          type: string
+          maxLength: 10000
+      required: [to, subject, text]
+
+    SendTestEmailResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        messageId:
+          type: string
+          nullable: true
+        sentAt:
+          type: string
+          format: date-time
+          nullable: true
+      required: [success, message]
+
+    CreateProspectRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        firstName:
+          type: string
+          maxLength: 255
+          nullable: true
+        lastName:
+          type: string
+          maxLength: 255
+          nullable: true
+        company:
+          type: string
+          maxLength: 255
+          nullable: true
+        jobTitle:
+          type: string
+          maxLength: 255
+          nullable: true
+        website:
+          type: string
+          maxLength: 512
+          nullable: true
+      required: [email]
+
+    ProspectResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        email:
+          type: string
+          format: email
+        firstName:
+          type: string
+          nullable: true
+        lastName:
+          type: string
+          nullable: true
+        company:
+          type: string
+          nullable: true
+        jobTitle:
+          type: string
+          nullable: true
+        website:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [ACTIVE, REPLIED, BOUNCED, UNSUBSCRIBED]
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, email, status, createdAt]
+
+    ImportProspectsResponse:
+      type: object
+      properties:
+        importedCount:
+          type: integer
+        skippedCount:
+          type: integer
+        errors:
+          type: array
+          items:
+            type: string
+      required: [importedCount, skippedCount, errors]
+
+    SendProspectEmailRequest:
+      type: object
+      properties:
+        senderId:
+          type: integer
+          format: int64
+        subject:
+          type: string
+          maxLength: 255
+        text:
+          type: string
+          maxLength: 10000
+      required: [senderId, subject, text]
+
+    EmailEventResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        senderId:
+          type: integer
+          format: int64
+        prospectId:
+          type: integer
+          format: int64
+        toEmail:
+          type: string
+          format: email
+        subject:
+          type: string
+        status:
+          type: string
+          enum: [SENT, FAILED, SKIPPED]
+        providerMessageId:
+          type: string
+          nullable: true
+        errorMessage:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, senderId, prospectId, toEmail, subject, status, createdAt]
+
+    CreateCampaignRequest:
+      type: object
+      properties:
+        senderId:
+          type: integer
+          format: int64
+        name:
+          type: string
+          maxLength: 255
+        subject:
+          type: string
+          maxLength: 255
+        text:
+          type: string
+          maxLength: 10000
+      required: [senderId, name, subject, text]
+
+    CampaignResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        senderId:
+          type: integer
+          format: int64
+        name:
+          type: string
+        subject:
+          type: string
+        text:
+          type: string
+        status:
+          type: string
+          enum: [DRAFT, RUNNING, COMPLETED]
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, senderId, name, subject, text, status, createdAt]
+
+    CampaignSendResponse:
+      type: object
+      properties:
+        campaignId:
+          type: integer
+          format: int64
+        totalProspects:
+          type: integer
+        sentCount:
+          type: integer
+        skippedCount:
+          type: integer
+        failedCount:
+          type: integer
+        status:
+          type: string
+          enum: [DRAFT, RUNNING, COMPLETED]
+      required: [campaignId, totalProspects, sentCount, skippedCount, failedCount, status]
+
+    CreateSuppressionRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        reason:
+          type: string
+          enum: [UNSUBSCRIBED, BOUNCED, MANUAL]
+      required: [email, reason]
+
+    SuppressionEntryResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        email:
+          type: string
+          format: email
+        reason:
+          type: string
+          enum: [UNSUBSCRIBED, BOUNCED, MANUAL]
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, email, reason, createdAt]
+
+    UnsubscribeRequest:
+      type: object
+      properties:
+        token:
+          type: string
+      required: [token]
+
+    UnsubscribeResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        email:
+          type: string
+          format: email
+      required: [success, message, email]
+
+security:
+  - bearerAuth: []
+
+paths:
+  /api/auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new user
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Validation or business error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/login:
+    post:
+      tags: [Auth]
+      summary: Login with email and password
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: JWT token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Invalid email or password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/users/me:
+    get:
+      tags: [Users]
+      summary: Get current user
+      responses:
+        '200':
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserMeResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/workspaces/current:
+    get:
+      tags: [Workspaces]
+      summary: Get current workspace
+      responses:
+        '200':
+          description: Current workspace
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/workspaces/current/members:
+    get:
+      tags: [Workspaces]
+      summary: List current workspace members
+      responses:
+        '200':
+          description: Workspace members
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WorkspaceMemberResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags: [Workspaces]
+      summary: Add an existing user to current workspace
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InviteWorkspaceMemberRequest'
+      responses:
+        '200':
+          description: Member added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceMemberResponse'
+        '400':
+          description: Validation or business error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/workspaces/current/members/{userId}:
+    delete:
+      tags: [Workspaces]
+      summary: Remove a workspace member
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: Member removed
+        '400':
+          description: Business error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/senders:
+    get:
+      tags: [Senders]
+      summary: List sender accounts
+      responses:
+        '200':
+          description: Sender accounts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SenderResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags: [Senders]
+      summary: Create sender account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSenderRequest'
+      responses:
+        '200':
+          description: Sender created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SenderResponse'
+        '400':
+          description: Validation or business error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/senders/{senderId}/test:
+    post:
+      tags: [Senders]
+      summary: Test SMTP connection for sender
+      parameters:
+        - name: senderId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: SMTP test result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SenderTestResponse'
+        '400':
+          description: SMTP error or business error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/senders/{senderId}/test-imap:
+    post:
+      tags: [Senders]
+      summary: Test IMAP connection for sender
+      parameters:
+        - name: senderId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: IMAP test result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SenderTestResponse'
+        '400':
+          description: IMAP error or business error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/senders/{senderId}/send-test:
+    post:
+      tags: [Senders]
+      summary: Send a test email using sender account
+      parameters:
+        - name: senderId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendTestEmailRequest'
+      responses:
+        '200':
+          description: Test email send result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SendTestEmailResponse'
+        '400':
+          description: Validation, SMTP or business error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/prospects:
+    get:
+      tags: [Prospects]
+      summary: List prospects
+      responses:
+        '200':
+          description: Prospects list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProspectResponse'
+    post:
+      tags: [Prospects]
+      summary: Create prospect
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProspectRequest'
+      responses:
+        '200':
+          description: Prospect created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProspectResponse'
+        '400':
+          description: Validation or business error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/prospects/import:
+    post:
+      tags: [Prospects]
+      summary: Import prospects from CSV
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+              required: [file]
+      responses:
+        '200':
+          description: Import summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportProspectsResponse'
+        '400':
+          description: Import or validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/prospects/{prospectId}:
+    get:
+      tags: [Prospects]
+      summary: Get prospect by id
+      parameters:
+        - name: prospectId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Prospect details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProspectResponse'
+        '400':
+          description: Business error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags: [Prospects]
+      summary: Delete prospect
+      parameters:
+        - name: prospectId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: Prospect deleted
+        '400':
+          description: Business error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/prospects/{prospectId}/send:
+    post:
+      tags: [Prospects]
+      summary: Send one email to prospect
+      parameters:
+        - name: prospectId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendProspectEmailRequest'
+      responses:
+        '200':
+          description: Email event created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailEventResponse'
+        '400':
+          description: Validation, suppression, SMTP or business error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/prospects/{prospectId}/events:
+    get:
+      tags: [Prospects]
+      summary: List email events for a prospect
+      parameters:
+        - name: prospectId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Prospect email events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EmailEventResponse'
+
+  /api/email-events:
+    get:
+      tags: [Email Events]
+      summary: List workspace email events
+      responses:
+        '200':
+          description: Workspace email events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EmailEventResponse'
+
+  /api/campaigns:
+    get:
+      tags: [Campaigns]
+      summary: List campaigns
+      responses:
+        '200':
+          description: Campaign list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CampaignResponse'
+    post:
+      tags: [Campaigns]
+      summary: Create one-step campaign
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCampaignRequest'
+      responses:
+        '200':
+          description: Campaign created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampaignResponse'
+        '400':
+          description: Validation or business error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/campaigns/{campaignId}:
+    get:
+      tags: [Campaigns]
+      summary: Get campaign by id
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Campaign details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampaignResponse'
+        '400':
+          description: Business error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/campaigns/{campaignId}/send:
+    post:
+      tags: [Campaigns]
+      summary: Run campaign for all ACTIVE prospects in current workspace
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Campaign execution summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampaignSendResponse'
+        '400':
+          description: Business error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/suppressions:
+    get:
+      tags: [Suppressions]
+      summary: List suppression entries
+      responses:
+        '200':
+          description: Suppression entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SuppressionEntryResponse'
+    post:
+      tags: [Suppressions]
+      summary: Add email to suppression list
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSuppressionRequest'
+      responses:
+        '200':
+          description: Suppression entry created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuppressionEntryResponse'
+        '400':
+          description: Validation or business error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/suppressions/{suppressionId}:
+    delete:
+      tags: [Suppressions]
+      summary: Delete suppression entry
+      parameters:
+        - name: suppressionId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: Suppression deleted
+        '400':
+          description: Business error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/public/unsubscribe:
+    get:
+      tags: [Public]
+      summary: Unsubscribe by token via query param
+      security: []
+      parameters:
+        - name: token
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Unsubscribe success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnsubscribeResponse'
+        '400':
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags: [Public]
+      summary: Unsubscribe by token via JSON body
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UnsubscribeRequest'
+      responses:
+        '200':
+          description: Unsubscribe success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnsubscribeResponse'
+        '400':
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
